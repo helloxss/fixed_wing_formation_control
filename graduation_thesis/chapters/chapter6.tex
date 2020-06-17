@@ -1,4 +1,4 @@
-\chapter{控制器仿真实验结果分析}
+\chapter{控制器仿真实验结果分析}%TODO:仿真需要给出控制器的相关参数，以及初始条件等等。
 \label{chap:simulatin_expermient}
 本章之中，按照第\ref{chap:controller_design}
 章中给出的控制器的数学模型，选定相应的初始条件进行双机的质点模型数学仿真：即不考虑无人机的姿态，只考虑无人机的位置，速度大小以及方向。
@@ -28,7 +28,7 @@
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/c5/c5-matlab-vel.jpg}
-    \caption{水平面双机速度关系}\label{fig:c5-matlab-vel}
+    \caption{水平面双机速度大小关系}\label{fig:c5-matlab-vel}
 \end{figure}
 \begin{figure}[H]
     \centering
@@ -98,8 +98,9 @@
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/c5/c5-real-eta_err}
-    \caption{领机从机速度方向误差}\label{c5-real-eta_err}
+    \caption{领机从机航迹角误差}\label{c5-real-eta_err}
 \end{figure}
+需要注意的一点是：此处的位置误差指的是从机的实际位置与编队的期望位置之间的位值误差，而并非与领机的位置误差。
 从图\ref{c5-real-pos_err_x}-图\ref{c5-real-pos_err_z}中可看出，编队的3向位置误差最终稳定在$\pm0.1m$范围之内；而无人机的翼展尺寸在$2m$左右
 则按照文献\cite{Zhang2017Aerodynamics}，此种精度可以满足固定翼无人机紧密编队的要求。
 

@@ -5,7 +5,7 @@
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/c3/c3-overview_controller.png}
-    \caption{控制逻辑框图}\label{fig:c3-overview_controller}
+    \caption{编队控制整体逻辑框图}\label{fig:c3-overview_controller}
 \end{figure}
 编队控制器的输入为定义的误差量，输出为无人机自动驾驶仪的内环输入值，即期望推力$T^{des}$，期望姿态$\Phi^{des},\theta^{des}$,偏航期望值$\Psi^{des}$将由内环姿态
 自动驾驶仪按照协调转弯条件计算得到。本章的剩余部分将分别设计竖直平面以及水平平面的控制器。
@@ -70,7 +70,7 @@ $PID$控制器参数。
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{figures/c3/c3-BTT.png}
-    \caption{无人机二维平面转弯运动}\label{fig:c3-BTT}
+    \caption{无人机二维平面转弯运动示意图}\label{fig:c3-BTT}
 \end{figure}
 由于飞机速度的动力学惯性很大，在微分时间$\Delta t$时间内，速度的变化量可以忽略不计；在此时间内的偏航角增量为$\Delta\eta$,按照图中的几何关系，不难得到：
 \begin{equation}
@@ -166,8 +166,10 @@ $PID$控制器参数。
     \end{equation}
 上式中各运动学量参见图\ref{fig:c3-BTT}，第二阶段法向加速度的产生详见式\ref{angle_controller}。再配合固定翼无人机协调转弯条件（式\ref{btt_a2roll}）,可得到分段之后的期望滚转角。
 \subsection{风速较大时的处理} 
-\subsubsection*{风速因素对于编队控制器的影响分析}
-无论导航与制导还是编队的期望速度均是对无人机的地速而言的。当内环姿态驾驶仪以无侧滑条件为基础时，若控制效果较好，则可保证侧滑角$\beta\approx 0$,即：无人机在水平二维平面运动时，空速方向与机身纵轴在同一竖直平面内。因而飞机在平飞时，空速方向几乎与机身纵轴重合。无论有风还是无风，均有上述结论。
+%\subsubsection{风速因素对于编队控制器的影响分析}
+下面分析风速较大时，编队控制器所受到的影响：无论导航与制导还是编队的期望速度均是对无人机的地速而言的。当内环姿态驾驶仪以无侧滑条件为基础时，若控制效果较好，
+则可保证侧滑角$\beta\approx 0$,即：无人机在水平二维平面运动时，空速方向与机身纵轴在同一竖直平面内。因而飞机在平飞时，空速方向几乎与机身纵轴重合。无论有风
+还是无风，均有上述结论。
 
 参照图\ref{fig:c02-2d_level_motion}，当风速$V_{wind}^f$较小时，空速与地速几乎重合，且等大，此时直接将空速方向认为与空速方向一致，进而与机体方向一致的做法是可行的：前文提出的位置、角度以及速度误差均投影在航迹系$O_kx_ky_kz_b$中，所产生的修正信号$|V|_{x_k}^{des}(k),a_{y_k}^{des}(k)$与体轴系的$O_bx_b$以及$O_by_b$几乎重合，i控制机构（油门，副翼）直接相应控制信号即可，符合前文的设计。
 
@@ -175,10 +177,11 @@ $PID$控制器参数。
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{figures/c3/heavy_wind.png}
-    \caption{空速与地速之差较大}\label{fig:heavy_wind}
+    \caption{空速与地速之差较大时各运动学量示意图}\label{fig:heavy_wind}
 \end{figure}
 图中，风速的大小以及方向已经不能忽略不计，可以得出。原始产生在航迹坐标系$O_kx_ky_kz_k$中的期望速度以及期望与执行机构（油门以及副翼）所在的机体系已有大小为$\sigma$的夹角。
-\subsubsection*{风速较大时的改进}
+%\subsubsection{风速较大时的改进}
+针对上述影响，按照风速的大小，可将控制器中的每一项添加与风速相关的项来补偿风速的影响：
 如图\ref{fig:heavy_wind}所示，原始在航迹坐标系之中产生的控制量的期望值若要在机体系之中产生正确的相应，需要进行相应的坐标变换。
 \begin{equation}
     \left[

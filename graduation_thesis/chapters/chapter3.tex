@@ -102,7 +102,7 @@ PX4为使用集成的开发人员提供了优化的api和sdk。所有模块都�
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/c4/PX4_archticher.png}
-    \caption{PX4软件架构}\label{fig:PX4_archticher.png}
+    \caption{PX4软件功能模块示意图}\label{fig:PX4_archticher.png}
 \end{figure}
 \subsection{导航以及位置外环实现逻辑}
 所谓导航模块(Naigator)，其功能是产生相应的期望位置航点。编队中领机按照人为设定的任务策略飞行，导航模块则根据给定的航点以及无人机的位置不断得出当前位置
@@ -154,12 +154,12 @@ TECS控制器，水平平面选用L1控制器。下面将简要介绍上述两�
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/c3/TECS_throttle.jpg}
-    \caption{总能量环}\label{fig:total_energy}
+    \caption{总能量环控制原理框图}\label{fig:total_energy}
 \end{figure}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/c3/TECS_pitch.jpg}
-    \caption{能量分配环}\label{fig:balance_energy}
+    \caption{能量分配环控制原理框图}\label{fig:balance_energy}
 \end{figure}
 图\ref{fig:total_energy}中，$K_i,K_d,T_{FF},\tau_{thr},K_{\dot{E}\rightarrow\Delta T}$分别为积分项，微分项比例系数，
 油门前馈项，油门时间常数以及比例向项系数。
@@ -171,7 +171,7 @@ TECS控制器，水平平面选用L1控制器。下面将简要介绍上述两�
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{figures/c3/L1_control}
-    \caption{L1控制逻辑图}\label{fig:L1_control}
+    \caption{L1控制器原理图}\label{fig:L1_control}
 \end{figure}
 之后期望向心加速度$a_{s_{cmd}}$由下式\cite{Park_2004}给出，此式即为L1控制器的导引律。
 \begin{equation}
@@ -181,7 +181,7 @@ TECS控制器，水平平面选用L1控制器。下面将简要介绍上述两�
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{figures/c3/L1_eff}
-    \caption{L1控制器控制效果}\label{fig：c3-L1_eff}
+    \caption{L1控制器控制航线追踪效果}\label{fig：c3-L1_eff}
 \end{figure}
 在做曲线航迹追踪时，按照Sanghyuk Park等人的分析，控制律将近似为PD控制器。
 之后，按照实际应用的需要，并参考Paul Riseborough, Brandon Jones 和 Andrew Tridgell等人为另一款开源无人机自动驾驶仪APM的L1
@@ -202,7 +202,7 @@ TECS控制器，水平平面选用L1控制器。下面将简要介绍上述两�
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.90\textwidth]{figures/c3/attitude_inner_loop}
-    \caption{姿态内环控制原理框图}\label{c3-attitude_inner_loop}
+    \caption{PX4姿态内环控制原理框图}\label{c3-attitude_inner_loop}
 \end{figure}
 其中，$\phi_{sp}$,$\theta_{sp}$,$\psi_{sp}$分别为滚转角、俯仰角以及偏航角期望值；$\dot{\phi}_{sp}$,$\dot{\theta}_{sp}$,$\dot{\psi}_{sp}$
 分别为姿态角速度期望值；$\dot{\Psi}_{sp}$为上述期望姿态角速度所组成的三维向量；$J^{b}_l$为无人机由惯性系（地面系）到机体系的转换矩阵；
@@ -218,5 +218,5 @@ $V_T$、$V_I$分别为无人机真实空速（true air speed）以及指示空�
 控制器中的前馈增益用来补偿空气动力学阻尼。体轴系下的力矩基本上由控制面以及气动阻尼产生。因此，为了保持滚转角速率为常数，
 控制力矩应保持与空气阻尼力矩与大小相等，方向相反，因此此种阻尼可由前馈项计算得出。
 
-内环控制器中的滚转以及俯仰通道的控制器的实现有者相似的结构,均为上述介绍的串级PID控制器，但是在偏航通道上，偏航角度度的期望值是直接由飞机协调转弯条件得出，
+内环控制器中的滚转以及俯仰通道的控制器的实现有者相似的结构,均为上述介绍的串级PID控制器，但是在偏航通道上，偏航角速度的期望值是直接由飞机协调转弯条件得出，
 以降低在飞机转弯时的衡侧向加速度，具体请参见文献\cite{Fangzhenping2005}
