@@ -44,7 +44,7 @@ Gazebo中的相应控制舵面运动的插件接受来自PX4的控制器信息�
 
 总而言之，Gazebo考虑了无人机详细的动力学方程，只是在空气动力和力矩的产生方面，使用了简单的工程化的计算方法，使用速度、翼面积、
 升阻系数等来计算无人机所受的力和力矩，无法模拟细致入微的空气动力学特性；因而不能使用Gazebo环境进行诸如油耗测试等涉及空气动力学
-影响的仿真实验。但是，作为编队控制器设计与仿真阶段，Gazebo不失为一种强大的验证算法的手段。
+影响的仿真实验。但是，在编队控制器设计与仿真阶段，利用Gazebo仿真不失为一种有效的验证算法的手段。
 
 另外，仿真之中的飞机的动力学模型由Gazebo仿真环境给出，可自定义飞机的质量，推力等参数；仿真之中的传感器数据由Gazebo产生，由PX4读取，作为
 真实环境之中的传感器数据的仿真。上述参量均可以按照本次无人机平台做出相应的修改。
@@ -194,10 +194,10 @@ Gazebo中的相应控制舵面运动的插件接受来自PX4的控制器信息�
         \bottomrule
     \end{tabular*}
 \end{table}
-仿真过程中的编队控制器的控制器参数如下表所示：
+动力学仿真过程中的编队控制器的控制器参数如下表所示：
 \begin{table}[H]
     \centering
-    \caption{水平面内控制器参数} \label{tab:matlab_PID_param}
+    \caption{水平面内控制器参数} \label{tab:real_PID_param}
     \begin{tabular*}{0.9\textwidth}{@{\extracolsep{\fill}}c|ccccc}
         \toprule
         参数 & 比例$K_P$     & 积分$K_I$    & 微分$K_D$ & 混合参数1 & 混合参数2  \\
@@ -210,7 +210,7 @@ Gazebo中的相应控制舵面运动的插件接受来自PX4的控制器信息�
 TECS控制器的参数如下表所示：
 \begin{table}[H]
     \centering
-    \caption{竖直面内TECS控制器参数} \label{tab:matlab_TECS_param}
+    \caption{竖直面内TECS控制器参数} \label{tab:real_TECS_param}
     \begin{tabular*}{0.9\textwidth}{@{\extracolsep{\fill}}c|cccc}
         \toprule
         TECS参数 & 油门时间常数 & 俯仰角时间常数 & 俯仰角阻尼 & 油门阻尼   \\
@@ -221,7 +221,7 @@ TECS控制器的参数如下表所示：
 \end{table}
 \begin{table}[H]
     \centering
-    \caption{竖直面内TECS控制器参数（续表）} \label{tab:matlab_TECS_param_app}
+    \caption{竖直面内TECS控制器参数（续表）} \label{tab:real_TECS_param_app}
     \begin{tabular*}{1.0\textwidth}{@{\extracolsep{\fill}}c|cccc}
         \toprule
         TECS参数 & 积分增益 & 俯仰角-速度比重常数 & 高度误差比例增益 & 速度误差比例增益  \\
@@ -270,6 +270,9 @@ TECS控制器的参数如下表所示：
 协调（倾斜）转弯：滚转后使升力对准所需机动方向，获得的侧向过载大，但是过渡时间长。\cite{YuJianQiao2010}上述原因，导致无人机内环在
 控制航向时过渡时间较大。
 \section{本章小结}
-本章着重介绍了本次设计所需要用到的仿真软件环境，详细介绍了Gazebo的软件架构，仿真机理以及仿真的相关特性。并通过ROS操作系统以及
+本章主要分为三部分：第一部分着重介绍了本次设计所需要用到的仿真软件环境，详细介绍了Gazebo的软件架构，仿真机理以及仿真的相关特性。并通过ROS操作系统以及
 MAVROS功能包搭建了与PX4内环进行数据交互的软件接口；之后结合Gazebo建立起了完整的编队控制器的无人机动力学仿真实验环境，
 为后文的动力学仿真提供了相应的平台。
+之后的主要工作是对于前文所设计的编队控制器进行响应的仿真：在第二部分，考虑无人机的质点运动模型，利用MATALB/Simulink等工具进行了
+编队控制器的算法层面的数学仿真。在第三部分，利用前文中所介绍的Gazebo仿真环境进行编队控制器的动力学仿真，并整定了相关控制器的
+参数，检验了控制器的稳定性。
