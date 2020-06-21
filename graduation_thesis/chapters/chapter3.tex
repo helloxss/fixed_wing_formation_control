@@ -1,228 +1,292 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% AUTHOR:lee-shun
-%
-% DESCRIBTION:第三章--自动驾驶仪控制逻辑
-%
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{固定翼无人机编队控制器设计}
+\label{chap:controller_design}
+第\ref{chap:formation_dynamic_equ}章中介绍了无人机双机编队的动力学模型，并将无人机运动分为竖直平面以及水平平面，之后介绍了编队控制器所依赖的自动驾驶仪导航、位置外环以及姿态内环的实现逻辑；再结合方程组\ref{fol_motion_eauation1}水平平面的直接输
+入量为$\Psi$的期望值，竖直平面的直接输入量为$\theta$和$V$的期望值。整体的控制逻辑框图如下图所示：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/c3/c3-overview_controller.png}
+    \caption{编队控制整体逻辑框图}\label{fig:c3-overview_controller}
+\end{figure}
+编队控制器的输入为定义的误差量，输出为无人机自动驾驶仪的内环输入值，即期望推力$T^{des}$，期望姿态$\Phi^{des},\theta^{des}$,偏航期望值$\Psi^{des}$将由内环姿态
+自动驾驶仪按照协调转弯条件计算得到。本章的剩余部分将分别设计竖直平面以及水平平面的控制器。
 
-\chapter{无人机动力学模型以及控制器建立}
-\label{chap:formation_dynamic_equ}
-本章基于无人机编队的领从方法（leader-follower method）建立无人机编队的相对运动方程。再根据飞行力学的相关知识
-建立单无人机的运动学模型，之后再介绍单无人机自动驾驶仪的实现逻辑。
-\section{无人机动力学模型的建立}
-为了与无人机自动驾驶仪的解耦控制方法相匹配，本文将无人机
-空间运动分为水平平面运动以及竖直平面运动，并在两个平面内
-内分别建立数学模型。由于无人机尺寸小，强度大，飞行包线较小，
-并且使用较为成熟的自动驾驶仪，现做如下假设：
-\begin{itemize}
-    \item 无人机为具有6运动自由度的三维空间刚体。
-    \item 忽略地球自转，将地球作为惯性系。
-    \item 忽略地球曲率,即所谓的“平板地球假设”。\cite{Wusentang2013}
-    \item 由于内环控制率以无人机协调（倾斜）转弯（STT）为基础（详见第\ref{chap:hardware}章），飞机满足无侧滑条件，假定侧滑角为0；
-        即空速方向与机体系$O_bx_b$在同一竖直平面内。
-    \item 由于编队飞行时的区域较小，领机与从机的大气环境以及地球重力场等因素完全一致。
-\end{itemize}
-本章中涉及的坐标系有：
+需要说明的是：本章前两节先假设大气静止，设计无风条件下的编队控制器，第三节再引入风的干扰，并做相应处理。根据第二章的坐标系的定义，
+此假设将使得航迹坐标系与速度坐标系重合，又因为“无侧滑条件”（也称作协调转弯条件，BTT）的引入，机体二维水平平面坐标系$O_bx_by_b$将与
+前二者的水平平面坐标系（$O_kx_ky_k$和$O_ax_ay_a$）重合。进而控制器产生的控制量与执行机构恰好对应，因此前两节之中，上述三种二维平面
+坐标系将不做区分。下面将选取领机航迹坐标系设计编队控制器。
+\section{水平平面编队控制器设计}
+\subsection{误差定义}
+导航与制导的本质是控制地速的方向，实现手段是产生垂直于地速方向的法向加速度$a_{y_k}^{des}$；
+因而本章中误差以及控制量全部定义在航迹坐标系$O_kx_ky_kz_k$之中。但编队控制器不仅要控制速度的方向，还要控制速度的
+大小，以实现与领机的同步飞行。编队控制的最终目标为：
 \begin{enumerate}
-    \item 地面坐标系$O_gx_gy_gz_g$：原点$O_g$点选为无人机自动驾驶仪解锁时的位置，$O_gx_g$轴指向地理北极，$O_gy_g$轴指向东，$O_gz_g$轴符合右手定则，
-        指向下。
-    \item 导航坐标系$NED(north-east-down)$：原点选作无人机质心，$N$轴指向地理北极，$E$轴指向东，$D$轴符合右手定则，指向下。
-    \item 航迹坐标系$O_kx_ky_kz_k$：原点$O_k$选为无人机质心，$O_kx_k$轴始终指向无人机地速矢量方向，$O_kz_k$轴位于包含$O_kx_k$轴的竖直平面内，
-        $o_ky_k$符合右手定则，指向右。
-    \item 机体坐标系$O_bx_by_bz_b$：原点$O_b$选为无人机质心，$O_bx_b$位于无人机的对称平面内，平行于机身轴线或者机翼的平均气动弦线，指向无人机机身前方；
-        $O_bz_b$亦在对称平面之内，垂直于$O_bx_b$轴，指向下；$O_by_b$垂直于对称平面，指向右。多数情况下，无人机操纵机构产生的力矩在该坐标系中定义。
-    \item 气流坐标系$O_ax_ay_az_a$：气流坐标系又被称作风坐标系或者速度坐标系；原点$O_a$取作无人机质心，$O_ax_a$始终指向无人机的来流方向的相反方向，
-        即空速矢量方向；$O_az_a$位于无人机对称面之内，
-        垂直于$O_ax_a$轴，指向下；$O_ay_a$轴符合右手定则，垂直于$O_ax_az_a$平面，指向右。只有在大气风速$V_{wind}=0$时，航迹系的$O_kx_k$才与气流坐标系的
-        $O_ax_a$重合。
+    \item 从机速度方向与领机的速度方向一致。
+    \item 从机的速度大小与领机的速度大小一致。
+    \item 从机的位置与从机的期望位置一致。
 \end{enumerate}
-本章中领机与从机的各运动学量以及几何关系分别用上标$l,f$标记，从机期望值以$“des”$上标标记；
-运动学量以及几何关系所属坐标系关系则用各个坐标系的字母作为下标标记。
-领机、从机在水平以及竖直平面内的几何关系分别在图\ref{fig:c02-2d_level_motion}和图\ref{fig:c02-2d_vert_motion}给出；
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\textwidth]{figures/c2/2d_level_motion.png}
-    \caption{水平平面双机编队几何关系}\label{fig:c02-2d_level_motion}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\textwidth]{figures/c2/2d_vert_motion.png}
-    \caption{竖直平面双机编队几何关系}\label{fig:c02-2d_vert_motion}
-\end{figure}
-在图\ref{fig:c02-2d_level_motion}中：
-$(x_{g}^l,y_{g}^l),(x_{g}^f,y_{g}^f),(x_{g}^{des},y_{g}^{des})$分别为领机、从机以及从机期望编队位置在地面坐标系$O_gx_gy_g$平面之中的分量；
-$\Psi^l,\Psi^f$分别为领机与从机的偏航角（yaw angle）；
-$\chi^l,\chi^f$分别为领机与从机的航迹偏角（航迹方位角）；
-$V_a,V_{wind},V_g$分别为领机和从机的空速、风速以及地速向量；
-$a_{b}^{des}$是从机产生的、在体轴系下的期望的法向加速度。
-
-在图\ref{fig:c02-2d_vert_motion}中：
-$z_{g}^l,,z_{g}^f,z_{g}^{des}$分别为领机、从机以及从机期望编队位置在地面坐标系$O_gz_g$轴上的分量；
-$\theta^l,\theta^f$分别为领机与从机的俯仰角（pitch angle）；
-$\gamma^l,\gamma^f$分别为领机与从机的航迹倾角（航迹倾斜角）；
-$V_a,V_{wind},V_g$分别为领机和从机的空速、风速以及地速向量；
-
-在图\ref{fig:c02-2d_level_motion}和图\ref{fig:c02-2d_vert_motion}中,由飞机飞行动力学可知，从机与领机三维运动学方程均为：
+又因为编队应以领机为参考，受控制量其中之一为从机的地速方向，因而误差应投影在领机航迹坐标系$O^{f}_kx_ky_kz_k$中。
+此处选择编队形成的三种误差类型，形成混合误差，产生期望控制量，进而转化到从机航迹坐标系之下，使从机做出响应。
+\begin{enumerate}
+    \item 领机与从机2维速度方向误差$\eta$，参见图\ref{fig:c02-2d_level_motion}。
+    \item 领机与从机速度（地速$V_g$）大小误差$|V_g|^{err}$。
+    \item 领机与期望位置3维误差$(P_{x_k}^{err},P_{y_k}^{err},P_{z_k}^{err})$
+\end{enumerate}
+因而此处水平平面的编队控制器的控制的任务是消除水平平面内的位置误差、速度大小以及速度方向误差，前两者在$O_kx_k$轴的分量需通过期望速
+度大小${|V|}_{x_k}^{des}$消除；前两者在$O_ky_k$轴的分量，以及速度方向误差须通过期望法向加速度$a_{y_k}^{des}$消除。值得注意的是：实
+际上此处的速度方向误差代表了航迹系内的两分量之比值，实际上与角度误差代表同一误差，但是由于航迹系$O_kx_k$轴的期望速度时刻变化，而所
+需的速度方向须按照领机速度方向一致，因而要控制速度的方向，而不是单纯的$O_kx_k$轴的速度分量。
+\subsection{航迹系x轴方向控制器}
+航迹系$O_kx_k$轴方向的控制器的输入为速度大小误差以及位置误差沿本轴分量的混合，控制器选用增量式离散$PID$控制器，最终的控制量的输出为航迹坐标系$O_kx_k$轴期望速度大小${|V|}_{x_k}^{des}$。控制器的表达式为：
 \begin{equation}
     \left\{
     \begin{array}{l}
-        \frac{dx_g}{dt}=V_g\cos\gamma\cos\chi\\
-        \frac{dy_g}{dt}=V_g\cos\gamma\sin\chi\\
-        \frac{dz_g}{dt}=-V_g\sin\gamma
+        |V_g|^{err}(k)=|V_g^{l}|(k)-|V_g^{f}|(k)\\
+        P_{x_k}^{err}(k)=P_{x_g}^{des}(k)-P_{x_g}^{f}(k)\\
+        e_{x_k}(k)=K_V|V_g|^{err}(k)+K_{Px}P_{x_k}^{err}(k)\\
+        \begin{aligned}
+        \Delta{|V|}_{x_k}^{des}(k)=&K_{p}^{xmix}[e_{x_k}(k)-e_{x_k}(k-1)]+K_{i}^{xmix}e_{x_k}(k)+\\
+        &K_{d}^{xmix}[e_{x_k}(k)-2e_{x_k}(k-1)+e_{x_k}(k-2)]
+        \end{aligned}
+        \\
+        {|V|}_{x_k}^{des}(k)=\Delta{|V|}_{x_k}^{des}(k)+{|V|}_{x_k}^{des}(k-1)
     \end{array}
     \right .
-    \label{fol_motion_eauation}
+    \label{xk_vel_gen_equ}
 \end{equation}
-现考虑无风情况下，则由图\ref{fig:c02-2d_level_motion}可知，无人机航迹偏角等于航向角，即$\Psi=\chi$；无人机在平衡状态下，迎角很小（本无人机约在2.3°左右），由图\ref{fig:c02-2d_vert_motion}可得$\theta\approx\gamma$。
-于是方程组\ref{fol_motion_eauation}可改写为：
+其中，前3式定义了混合误差形式，实际为速度误差与位置误差的线性叠加。后2式表示了最终的期望速度大小的产生。$k$为控制器第$k$次采样计算；$K_V,K_P$为误差线性混合常；$K_{p}^{xmix},K_{i}^{xmix},K_{d}^{xmix}$为增量式离散
+$PID$控制器参数。
+
+此处产生的期望速度大小，并不能直接为内环姿态驾驶仪所响应，需要经过竖直平面控制器的计算，位置误差$P_{z_k}^{err}$共同产生期望油门以及期望俯仰角。
+\subsection{航迹系y轴方向控制器}
+航迹系$O_ky_k$轴方向的控制器的输入为速度方向误差$\eta$以及位置误差的混合，类似于航迹系$O_kx_k$轴方向的控制器，控制器也选用增量式离散$PID$控制器，最终的输出为无人机滚转角期望值。
+由图\ref{fig:c02-2d_level_motion}可得到：
+\begin{equation}
+    \eta^f=\Psi^l-\Psi^f
+    \label{yaw_error}
+\end{equation}
+上式得到的是无人机速度方向的角度误差；
+
+再考虑如图所示的无人机二维平面转弯运动：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{figures/c3/c3-BTT.png}
+    \caption{无人机二维平面转弯运动示意图}\label{fig:c3-BTT}
+\end{figure}
+由于飞机速度的动力学惯性很大，在微分时间$\Delta t$时间内，速度的变化量可以忽略不计；在此时间内的偏航角增量为$\Delta\eta$,按照图中的几何关系，不难得到：
+\begin{equation}
+    a_{y_k}=V_g\dot{\eta}
+    \label{btt_dot}
+\end{equation}
+上式即无人机期望偏航角速度与期望法向加速度关系。类似于上一节，定义混合误差为角度误差以及距离误差的线型混合。
+再利用上一小节提出的增量式离散$PID$控制器，再综合式\ref{yaw_error},可得混合误差到期望法向加速度的表达式为：
 \begin{equation}
     \left\{
-    \begin{array}{l}
-        \frac{dx_g}{dt}=V_g\cos\theta\cos\Psi\\
-        \frac{dy_g}{dt}=V_g\cos\theta\sin\Psi\\
-        \frac{dz_g}{dt}=-V_g\sin\theta
+        \begin{array}{l}
+            \eta^f(k)=\Psi^l(k)-\Psi^f(k)\\
+            P_{y_k}^{err}(k)=P_{y_g}^{des}(k)-P_{y_g}^{f}(k)\\
+            e_{y_k}(k)=K_{\eta}\eta^f(k)+K_{Py}P_{y_k}^{err}(k)\\
+                \begin{aligned}
+                \Delta\dot{\Psi}^{des}(k)=&K_{p}^{ymix}[e_{y_k}(k)-e_{y_k}(k-1)]+K_{i}^{ymix}e_{y_k}(k)+\\
+                &K_{d}^{ymix}[e_{y_k}(k)-2e_{y_k}(k-1)+e_{y_k}(k-2)]
+                \end{aligned}\\
+            \dot{\Psi}^{des}(k)=\Delta\dot{\Psi}^{des}(k)+\dot{\Psi}^{des}(k-1)\\
+            \dot{\eta}^{des}(k)=-\dot{\Psi}^{des}(k)\\
+            a_{y_k}^{des}(k)=-V_g^{f}(k)\dot{\eta}^{des}(k)
     \end{array}
+\right .
+    \label{angle_controller}
+\end{equation}
+上式得到的是期望法向加速度，再利用协调转弯（BTT）条件，将期望法向加速度，转化为期望滚转角：
+\begin{equation}
+    \tan\Phi^{des}(k)=\frac{a_{y_k}^{des}(k)}{g}
+    \label{btt_a2roll}
+\end{equation}
+其中，$g$为当地重力加速度常量。至此，水平平面面内可计算得到无人机的期望滚转角$\Phi^{des}$以及期望速度大小$|V|_{x_k}^{des}$
+\section{竖直平面编队控制器设计}
+竖直平面编队控制器的输入为期望速度大小$|V|_{x_k}^{des}$以及期望高度（实际代表了高度误差$P_{z_b}^{err}$），输出为期望俯仰角$\theta^{des}$以及期望推力$T^{des}$。控制器选用基于能量的总能量控制法
+（total energy control system，$TECS$）。固定翼无人机的速度控制和高度控制是耦合的，即单独控制高度或速度时，另一个未被控制量将会发生变化：
+下面通过飞机飞行动力学纵向运动方程简单说明：
+\\方程组\ref{fol_motion_eauation1}的第三式说明：飞机高度方向的变化率与地速大以及俯仰角大小有关，且为正相关。
+\\根据飞机飞行动力学\cite{Fangzhenping2005}，无人机纵向运动质心运动的动力学方程为：
+\begin{equation}
+    \left\{
+    \begin{aligned}
+    &m \frac{\mathrm{d} V}{\mathrm{d} t}=T \cos (\alpha+\varphi) \cos \beta-D-m g \sin \gamma\\
+    &m V \cos \gamma \frac{\mathrm{d} \chi}{\mathrm{d} t}=T[\sin (\alpha+\varphi) \sin \mu-\cos (\alpha+\varphi) \sin \beta \cos \mu]+C \cos \mu+L \sin \mu\\
+    &-m V \frac{\mathrm{d} \gamma}{\mathrm{d} t}=T[-\sin (\alpha+\varphi) \cos \mu-\cos (\alpha+\varphi) \sin \beta \sin \mu]+\operatorname{Csin} \mu-L \cos \mu+m g \cos \gamma
+    \end{aligned}
     \right .
-    \label{fol_motion_eauation1}
+    \label{point_dynamaic}
 \end{equation}
-方程组\ref{fol_motion_eauation1}的第1、2两式表示无人机在水平平面内的运动轨迹；第3式表示无人机在竖直平面内的运动轨迹。方程组中，控制的直接输入量为从机的$V_{g}^f,\theta^f,\Psi^f$，再确定飞机的初始运动量之后，可唯一确定领机与从机的
-运动规律。
+其中，$\alpha,\mu,\phi$分别为迎角，速度滚转角以及发动机安装角。
+根据之前的假设，可以将第一式近似作：
+\begin{equation}
+    m \frac{\mathrm{d} V}{\mathrm{d} t}=T-D-m g \sin \theta
+    \label{1st_point_dynamaic}
+\end{equation}
+综合\ref{1st_point_dynamaic}、\ref{fol_motion_eauation1}两式，可以得到如下关于速度以及高度通道的控制逻辑图：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/c3/relation_theta_thrust}
+    \caption{速度以及高度通道的控制逻辑图}\label{fig:relation_theta_thrust}
+\end{figure}
+因而速度和高度需要同时考虑，相应的，期望俯仰角以及推力也需要同时计算。TECS控制器正是为此种情况设计的：
+次处的TECS控制器的设计参照PX4内部的位置控制部分相应代码，但做出了一些工程化的改进，详见下一节。
 
-值得注意的是：上述控制量并不能直接由编队控制器产生，但经过理想内环控制器以及无人机动力学模型之后，将产生相应的上述的直接控制量，完整流程将在第\ref{chap:controller_design}章中介绍。
-\section{自动驾驶仪控制逻辑}
-正如前文所提到的:由于文中编队控制器基于领从方法（leader-follower method），因而领机的飞行完全是由预先给定的一系列航迹点以及自动驾驶仪
-所决定的。并且，本文设计的的编队控制器是以现有开源自动驾驶仪PX4的内环为基础；因此，本章将首先介绍控制领机飞行的自动驾驶导航以
-及位置模块的实现逻辑，之后将介绍固定翼无人机编队飞行至关重要的基础环节-----自动驾驶仪内环，即姿态内环的实现逻辑。
-内环姿态驾驶仪使用的是开源自动驾驶仪PX4。PX4是一个为无人机或者其他无人系统设计的高度模块化、可定制化的、可运行于多种硬件平台的
-开源自动驾驶仪软件系统；
-PX4为使用集成的开发人员提供了优化的api和sdk。所有模块都是自包含的，可以轻松地针对不同的模块进行交换，而无需修改核心。特性易于部署和重新配置。可以与ROS等机器人操作系统进行数据交互。下图展示了PX4
-的软件架构以及各个模块之间的交互关系：
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{figures/c4/PX4_archticher.png}
-    \caption{PX4软件功能模块示意图}\label{fig:PX4_archticher.png}
-\end{figure}
-\subsection{导航以及位置外环实现逻辑}
-所谓导航模块(Naigator)，其功能是产生相应的期望位置航点。编队中领机按照人为设定的任务策略飞行，导航模块则根据给定的航点以及无人机的位置不断得出当前位置
-下的期望航点。导航模块并无控制器参与，本模块是利用既定的飞行策略，产生期望航点，对起飞，降落等特殊飞行环节作出一定得针对性的策略。
-本次的编队控制器设计将不涉及导航模块的设计。
-
-位置外环功能是接受来自导航模块的期望位置，再结合无人机的当前位置，按照给定的导航算法，产生姿态内环的所接受的
-期望姿态以及期望推力值。位置外环将无人机的运动分为竖直与水平平面的运动，并在上述两个平面内分别设计位置控制器；竖直平面控制器选用
-TECS控制器，水平平面选用L1控制器。下面将简要介绍上述两种控制器的控制逻辑：
-\subsubsection{TECS控制器控制逻辑}
-所谓总能量控制（total energy control）是将无人机的速度以及高度计算得到相应的动能以及势能作为直接控制对象，应用PID控制器对动能与势能的和（total energy）
-以及动能与势能的转化（total energy balance）进行控制，计算得到无人机期望俯仰角以及期望推力的控制器。飞机作为一个动力学系统，其机械能来自推力做功的输入，因而总能量控制对应着期望推力；与之对应的俯仰角控制是能量守恒的，
-可作为动能向势能（反之亦然）的转化途径，对此种能量转化的控制对应着期望俯仰角。下面简要介绍TECS控制器的计算过程：
-\\
-无人机的总能量为：
-\begin{equation}
-    E_T=\frac{1}{2}mV_T^2+mgh
-    \label{ET}
-\end{equation}
-对上式两边微分，可得到总能量变化率：
-\begin{equation}
-    \dot{E_T}=mV_T\dot{V_T}+mg\dot{h}
-    \label{ET_rate}
-\end{equation}
-由此可得单位总能量变化率：
-\begin{equation}
-    \dot{E}=\frac{\dot{E}_{T}}{m g V_{T}}=\frac{\dot{V}_{T}}{g}+\frac{\dot{h}}{V_{T}}=\frac{\dot{V}_{T}}{g}+\sin \gamma
-    \label{specif_ET_rate}
-\end{equation}
-更换式\ref{point_dynamaic}第一式形式，可得到：
-\begin{equation}
-    T-D=m g\left(\frac{\dot{V}_{T}}{g}+\sin \gamma\right)
-    \label{point_dynamaic_change}
-\end{equation}
-由此可得：
-\begin{equation}
-    \Delta T=m g\left(\frac{\dot{V}_{T}}{g}+sin\gamma\right)
-    \label{thrust}
-\end{equation}
-关于能量转化，定义：
-\begin{equation}
-    B=m g h-\frac{1}{2} m V_{T}^{2}
-\end{equation}
-能量转化率为：
-\begin{equation}
-\dot{B}=sin\gamma-\frac{\dot{V}_{T}}{g}
-\end{equation}
-这里参照开源自驾仪PX4内部的TECS控制器设计方法，总能量环和能量分配环的控制逻辑框图如下所示：
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figures/c3/TECS_throttle.jpg}
-    \caption{总能量环控制原理框图}\label{fig:total_energy}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figures/c3/TECS_pitch.jpg}
-    \caption{能量分配环控制原理框图}\label{fig:balance_energy}
-\end{figure}
-图\ref{fig:total_energy}中，$K_i,K_d,T_{FF},\tau_{thr},K_{\dot{E}\rightarrow\Delta T}$分别为积分项，微分项比例系数，
-油门前馈项，油门时间常数以及比例向项系数。
-图\ref{fig:balance_energy}中，$K_i,K_d,\tau_{\theta},K_{\dot{B}\rightarrow\Delta \theta}$分别为积分项，微分项比例系数，俯仰角时间常数以及比例向项系数。
-\subsubsection{L1控制器实现逻辑}
-所谓L1控制器是Sanghyuk Park等人在文献\cite{Park_2004}中提出的一种非线性航迹追踪方法的一种工程实现。Sanghyuk Park在此文中对于此种
-控制器的稳定性做了详细的证明，并在不同飞行状态下对此种控制器与传统线性的控制器控制效果做出了完整对比。下面仅作简要介绍：
-应用L1控制器分为两步：首先应选取在所控制无人机之前的期望航迹之上的并且距离无人机当前位置为L1距离的参考点，如下图\cite{Park_2004}所示：
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\textwidth]{figures/c3/L1_control}
-    \caption{L1控制器原理图}\label{fig:L1_control}
-\end{figure}
-之后期望向心加速度$a_{s_{cmd}}$由下式\cite{Park_2004}给出，此式即为L1控制器的导引律。
-\begin{equation}
-    a_{s_{cmd}}=2\frac{V^2}{L_1}sin\eta
-\end{equation}
-最终的控制效果如下图所示\cite{Park_2004}：
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\textwidth]{figures/c3/L1_eff}
-    \caption{L1控制器控制航线追踪效果}\label{fig：c3-L1_eff}
-\end{figure}
-在做曲线航迹追踪时，按照Sanghyuk Park等人的分析，控制律将近似为PD控制器。
-之后，按照实际应用的需要，并参考Paul Riseborough, Brandon Jones 和 Andrew Tridgell等人为另一款开源无人机自动驾驶仪APM的L1
-控制器设计，将上述导引律做如下改动：
+至此，来自水平平面的期望速度$|V|_{x_k}^{des}$以及纵向平面的位置误差$P_{z_k}^{err}$将转化为期望俯仰角以及期望推力进入内环姿态驾驶仪；水平平面编队控制器
+产生的期望滚转角也将进入姿态驾驶仪内环。内环姿态自动驾驶仪首先按照无侧滑条件得出期望偏航角速度$\dot{\Phi}^{des}$，然后再利用串级PID分角速度环，角
+加速度环计算得到期望的执行机构的偏转角度。但现在的编队控制器还不足以直接用来进行编队控制实现，还需要经过一定的工程处理，详见下一节。
+\section{实际应用时的考虑}
+在实际应用编队控制器时，按照已有的经验，应主要考虑以下几个方面：
 \begin{enumerate}
-    \item 显式表示控制律中的频率以及阻尼。
-    \item 显式表示跟踪角度。
-    \item 可以使用小于L1长度的盘旋半径。
-    \item 修改原始圆形追踪控制律，使用PD控制器使得盘旋时可使用小于L1长度的盘旋半径。
-    \item 修改控制逻辑可以分别调整L1控制器的阻尼比以及周期。\label{enu:period}
+    \item 在无人机距离期望位置较远以及相对较近时，控制的目的是不完全一致的；应根据不同的控制需求分段设计控制律。
+    \item 无人机的空速与地速差距较大（风速很大）时，地速与空速方向不能简单认为一致，应分析之后做相应的处理。
+    \item 考虑到无人机各个动力学量的范围，应按照前期对于飞行平台飞行性能计算的结果对控制器计算过程中的各个物理量进行实际限幅。
+    \item 无人机原始信息两量测噪声问题，应设计便于使用的滤波器加以滤波。
 \end{enumerate}
-对于较为关键的第\ref{enu:period}项，最终的$L1$长度选择可由下式表示：
- \begin{equation}
-     L_1 = \frac{V}{\pi T_{L1} \xi_{L1}}
-\end{equation}
-\subsection{姿态内环控制原理}
-就总体结构而言，姿态内环的控制方法为为串级PID控制，分为外环角度环，次外环角速度环以及内环角加速度环，其控制框图如下所示：
+下面按照上述问题介绍相应的解决方法：
+
+\subsection{编队控制器分段设计} 
+在位置误差较大时，编队控制器的主要目的应为：以最大速度飞行，迅速减小距离误差；此时无人机速度的期望方向应时刻指向期望点而并非领机的速度方向。选择水平距离误差大小作为分段控制器的分段依据，定义水平距离误差为$|P|_{2d}^{err}(k)=\sqrt{[P_{x_k}^{err}(k)]^2+[P_{y_k}^{err}(k)]^2}$，决断距离记作$|P_0|_{2d}^{err}$。于是可以得到以下期望速度的表达式：
+\begin{equation}
+    |V|_{x_k}^{des}(k)=
+    \begin{cases}
+        V_{max}^f& |P|_{2d}^{err}(k)>|P_0|_{2d}^{err}\\
+        \Delta{|V|}_{x_k}^{des}(k)+{|V|}_{x_k}^{des}(k-1)& |P|_{2d}^{err}(k)\leq|P_0|_{2d}^{err}
+    \end{cases}
+    \end{equation}
+第二阶段的期望速度速度产生详见式\ref{xk_vel_gen_equ}。
+关于此阶段的法向加速度的产生，此处使用××等人提出的L1控制器,将L1距离选为从机当前位置与期望位置的距离误差。其表达式如下：
+\begin{equation}
+    a_{y_k}^{des}(k)=
+    \begin{cases}
+        2\frac{V^2}{L_1}\sin{\frac{\eta}{2}}& |P|_{2d}^{err}(k)>|P_0|_{2d}^{err}\\
+        -V_g^{f}(k)\dot{\eta}^{des}(k)& |P|_{2d}^{err}(k)\leq|P_0|_{2d}^{err}
+    \end{cases}
+    \end{equation}
+上式中各运动学量参见图\ref{fig:c3-BTT}，第二阶段法向加速度的产生详见式\ref{angle_controller}。再配合固定翼无人机协调转弯条件（式\ref{btt_a2roll}）,可得到分段之后的期望滚转角。
+\subsection{风速较大时的处理} 
+%\subsubsection{风速因素对于编队控制器的影响分析}
+下面分析风速较大时，编队控制器所受到的影响：无论导航与制导还是编队的期望速度均是对无人机的地速而言的。当内环姿态驾驶仪以无侧滑条件为基础时，若控制效果较好，
+则可保证侧滑角$\beta\approx 0$,即：无人机在水平二维平面运动时，空速方向与机身纵轴在同一竖直平面内。因而飞机在平飞时，空速方向几乎与机身纵轴重合。无论有风
+还是无风，均有上述结论。
+
+参照图\ref{fig:c02-2d_level_motion}，当风速$V_{wind}^f$较小时，空速与地速几乎重合，且等大，此时直接将空速方向认为与空速方向一致，进而与机体方向一致的做法是可行的：前文提出的位置、角度以及速度误差均投影在航迹系$O_kx_ky_kz_b$中，所产生的修正信号$|V|_{x_k}^{des}(k),a_{y_k}^{des}(k)$与体轴系的$O_bx_b$以及$O_by_b$几乎重合，i控制机构（油门，副翼）直接相应控制信号即可，符合前文的设计。
+
+但当风速较大时（例如，风速大小已经超过了地速的$\frac{1}{3}$，且与飞机地速有一定的角度），则会出现如下图所示的情况：
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.90\textwidth]{figures/c3/attitude_inner_loop}
-    \caption{PX4姿态内环控制原理框图}\label{c3-attitude_inner_loop}
+    \includegraphics[width=0.5\textwidth]{figures/c3/heavy_wind.png}
+    \caption{空速与地速之差较大时各运动学量示意图}\label{fig:heavy_wind}
 \end{figure}
-其中，$\phi_{sp}$,$\theta_{sp}$,$\psi_{sp}$分别为滚转角、俯仰角以及偏航角期望值；$\dot{\phi}_{sp}$,$\dot{\theta}_{sp}$,$\dot{\psi}_{sp}$
-分别为姿态角速度期望值；$\dot{\Psi}_{sp}$为上述期望姿态角速度所组成的三维向量；$J^{b}_l$为无人机由惯性系（地面系）到机体系的转换矩阵；
-$V_T$、$V_I$分别为无人机真实空速（true air speed）以及指示空速（indicator air speed）;形如“$\hat{\theta}$”的符号为相应
-物理量的估计值。
-
-如上图所示，姿态驾驶仪的外环计算期望姿态与估计姿态之间的误差，经过比例控制之后产生角速度期望值。
-内环计算速率误差并且利用比例积分控制产生期望的角加速度期望值。
-
-之后，控制面的控制角位置的产生则由期望的角加速度以及无人机系统的先验知识，即控制分配关系所产生。
-进一步的，因为在高速下的控制面效率要大于低速下，因而控制器中设计“巡航速度”这一参数来计算空速的影响。
-
-控制器中的前馈增益用来补偿空气动力学阻尼。体轴系下的力矩基本上由控制面以及气动阻尼产生。因此，为了保持滚转角速率为常数，
-控制力矩应保持与空气阻尼力矩与大小相等，方向相反，因此此种阻尼可由前馈项计算得出。
-
-内环控制器中的滚转以及俯仰通道的控制器的实现有者相似的结构,均为上述介绍的串级PID控制器，但是在偏航通道上，偏航角速度的期望值是直接由飞机协调转弯条件得出，
-以降低在飞机转弯时的衡侧向加速度，具体请参见文献\cite{Fangzhenping2005}
+图中，风速的大小以及方向已经不能忽略不计，可以得出。原始产生在航迹坐标系$O_kx_ky_kz_k$中的期望速度以及期望与执行机构（油门以及副翼）所在的机体系已有大小为$\sigma$的夹角。
+%\subsubsection{风速较大时的改进}
+针对上述影响，按照风速的大小，可将控制器中的每一项添加与风速相关的项来补偿风速的影响：
+如图\ref{fig:heavy_wind}所示，原始在航迹坐标系之中产生的控制量的期望值若要在机体系之中产生正确的相应，需要进行相应的坐标变换。
+\begin{equation}
+    \left[
+    \begin{matrix}
+        control\_input\_x_b(k)\\
+        control\_input\_x_y(k)
+    \end{matrix}
+    \right]
+    =
+    \left[
+    \begin{matrix}
+        cos\sigma& -sin\sigma\\
+        sin\sigma& cos\sigma
+    \end{matrix}
+    \right]
+    \left[
+        \begin{matrix}
+            |V|_{x_k}^{des}(k)\\
+            a_{y_k}^{des}(k)
+        \end{matrix}
+        \right]
+\end{equation}
+但是由于机体系两个通道所能够接受的的控制量并不是一致的，需要进行工程化处理：
+\begin{equation}
+    \left\{
+        \begin{aligned}
+            &control\_input\_x_b(k)=cos\sigma|V|_{x_k}^{des}(k)+\sum_{n=1}^k\{-sin[\sigma(n)]a_{y_k}^{des}(n)T\}\\
+            &control\_input\_x_y(k)=\frac{1}{T}\{sin[\sigma(k)|V|_{x_k}^{des}(k)]-sin[\sigma(k-1)|V|_{x_k}^{des}(k-1)]\}+cos\sigma a_{y_k}^{des}(k)
+        \end{aligned}
+    \right .
+\end{equation}
+上式中，$T$是控制时间间隔。实际应用时上式中的微分项要考虑低通滤波以及时间间隔问题，积分项应考虑积分饱和问题。
+\subsection{无人机飞行性能限幅设计}
+考虑到实际系统各个环节的有界性问题，需要按照无人机气动外形尺寸以及基本飞机空气动力学，计算得出的无人机飞行性能参数，作为实际控制时的各个环节物理量的限幅依据。表\ref{tab:takeoff_performance}-\ref{tab:sink_performance}展示了飞机部分飞行性能：
+\begin{table}[H]
+    \centering
+    \caption{无人机起飞、爬升性能} \label{tab:takeoff_performance}
+    \begin{tabular*}{0.9\textwidth}{@{\extracolsep{\fill}}c|ccccccc}
+    \toprule
+        飞行性能&抬轮速度&起飞速度&滑跑距离&起飞时间
+        &爬升率&爬升角
+        \\
+    \midrule
+        值&$4.82m/s$&$5.52m/s$&$16.45m$&$7.36s$
+        &$5.99m/s$&$31.21°$\\
+    \bottomrule
+\end{tabular*}
+\end{table}
+\begin{table}[H]
+    \centering
+    \caption{无人机平飞性能} \label{tab:task_performance}
+    \begin{tabular*}{0.9\textwidth}{@{\extracolsep{\fill}}c|cccc}
+    \toprule
+        飞行性能&平定常飞空速&最大空速&最小空速&失速迎角%TODO:需要有最大前项加速度
+        \\
+    \midrule
+        值&$11.52m/s$&$43.76m/s$&$4.60m/s$&$9.94°$\\
+    \bottomrule
+\end{tabular*}
+\end{table}
+\begin{table}[H]
+    \centering
+    \caption{无人机机动性能} \label{tab:motive_performance}
+    \begin{tabular*}{0.9\textwidth}{@{\extracolsep{\fill}}c|ccccc}
+    \toprule
+        飞行性能&转弯速率&转弯半径&转弯时间&法向过载系数&最大滚转角%TODO:需要有最大滚转角速度
+        \\
+    \midrule
+        值&$11.56m/s$&$14.31m/s$&$7.80s$&$1.38$&$43.56°$\\
+    \bottomrule
+\end{tabular*}
+\end{table}
+\begin{table}[H]
+    \centering
+    \caption{无人机下降、爬降落性能} \label{tab:sink_performance}
+    \begin{tabular*}{0.9\textwidth}{@{\extracolsep{\fill}}c|cccc}
+    \toprule
+        飞行性能&下降率&下降角&降落速度&滑跑距离
+        \\
+    \midrule
+        值&$10.19m/s$&$60.15m/s$&$5.89m/s$&$14.81m$
+        \\
+    \bottomrule
+\end{tabular*}
+\end{table}
+\subsection{原始数据滤波器设计}
+此处所涉及的原始数据，主要是来自领机以及从机的空速计测量的空速信息。此处使用一阶低通滤波器来实现对于空速信息的滤波。
+一阶低通滤波器又称作一阶惯性滤波器，传递函数形式为标准一阶惯性环节：
+\begin{equation}
+    V_0=\frac{1}{1+\tau j\omega}
+\end{equation}
+其中$\tau$是时间常数。转换成时域形式：
+\begin{equation}
+    V_0=V_i -\tau\frac{dV_0}{dt}
+\end{equation}
+离散化之后：
+\begin{equation}
+    V_0(k)=\frac{V_i(k)+\frac{\tau}{T}V_0(k-1)}{1+\frac{\tau}{T}}
+\end{equation}
+其中，$T$为控制器时间间隔，$T=\frac{1}{f}$。
+此种滤波器在使用时需要注意时间常数的选择，时间常数过大，虽然数据波形会相对平滑，但是滞后较为严重。
 \section{本章小结}
-本章第一部分着重介绍编队控制器设计仿真所用到的坐标系，并提出了相关的飞行力学的假设，其中比较重要的一点为协调转弯的假设，是将编
-队控制器产生的中间量向期望姿态角转化的一项重要条件；本章的第二部分首先给出了双机编队在水平平面以及竖直平面内的、按照领从方法下的
-双机几何关系，并在此基础之上，得出了每架无人机的运动学模型，并按照相关的假设，对此运动方程进行了简化，为后文的编队控制器的数学
-仿真提供了数学模型。最后一部分，本文着重介绍了PX4自动驾驶仪的位置环（外环）以及姿态环（内环）的实现原理：外环选取L1控制器以及
-TECS控制器进行介绍；内环则介绍了串级PID控制器控制无人机姿态的整体流程，为后文编队控制器的设计提出了输出的具体形式。
+本章分两部分分别从设计角度以及实际应用的角度阐述了编队控制器的设计流程：在第一部分之中，首先按照编队的期望值给出编队控制的误差定义，
+之后，对应控制机构对误差进行分组，然后对水平面内的相关误差，利用增量式PID控制器进行控制，得出相应的中间量，之后再利用总能量控制器
+（TECS控制器）结合竖直平面内的高度误差得出部分控制器输出，最后利用无人机协调转弯条件得到对应PX4自动驾驶仪内环的控制器全部输出。
+从而完成了编队控制器的设计。第二部分，着重考虑此编队控制器
+的实际应用的需要，根据以往的工程经验，对控制器的各个环节进行了工程化处理，例如加入合适的滤波器以及考虑风速较大时的补偿等。
+
