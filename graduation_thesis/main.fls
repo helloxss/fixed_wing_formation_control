@@ -426,6 +426,12 @@ INPUT chapters/chapter5.tex
 INPUT chapters/chapter5.tex
 INPUT figures/c4/c4-soft-hard.png
 INPUT figures/c4/double_plane_real.png
+INPUT figures/adds/geofence_overview.jpg
+INPUT figures/adds/states_mech.png
+INPUT figures/adds/protected_arch.png
+INPUT figures/adds/hard_loop_com.png
+INPUT figures/adds/hard_loop_leader.png
+INPUT figures/adds/hard_loop_fol.png
 INPUT misc/3_conclusion.tex
 INPUT misc/3_conclusion.tex
 INPUT misc/4_reference.tex
