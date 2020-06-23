@@ -432,6 +432,7 @@ INPUT figures/adds/protected_arch.png
 INPUT figures/adds/hard_loop_com.png
 INPUT figures/adds/hard_loop_leader.png
 INPUT figures/adds/hard_loop_fol.png
+INPUT figures/adds/real_test.png
 INPUT misc/3_conclusion.tex
 INPUT misc/3_conclusion.tex
 INPUT misc/4_reference.tex

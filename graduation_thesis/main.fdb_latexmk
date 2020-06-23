@@ -1,16 +1,16 @@
 # Fdb version 3
-["biber main"] 1592747405 "main.bcf" "main.bbl" "main" 1592814535
-  "main.bcf" 1592814526 126776 dc247219dd11e165e01451a776ee5f3f "xelatex"
+["biber main"] 1592747405 "main.bcf" "main.bbl" "main" 1592882971
+  "main.bcf" 1592882963 126776 dc247219dd11e165e01451a776ee5f3f "xelatex"
   "misc/ref.bib" 1592662061 11406 4d51345629b1f28a5aea406d5c7b4829 ""
   (generated)
-  "main.bbl"
   "main.blg"
-["xdvipdfmx"] 1592814526 "main.xdv" "main.pdf" "main" 1592814535
-  "main.xdv" 1592814526 779664 69cb42568f6762e3baa395505d66c6f2 "xelatex"
+  "main.bbl"
+["xdvipdfmx"] 1592882963 "main.xdv" "main.pdf" "main" 1592882971
+  "main.xdv" 1592882963 782572 275918459579882c74f698bf8425b1d7 "xelatex"
   (generated)
   "main.pdf"
-["xelatex"] 1592814523 "main.tex" "main.xdv" "main" 1592814535
-  "/dev/null" 1592790937 0 d41d8cd98f00b204e9800998ecf8427e ""
+["xelatex"] 1592882960 "main.tex" "main.xdv" "main" 1592882971
+  "/dev/null" 1592881538 0 d41d8cd98f00b204e9800998ecf8427e ""
   "/usr/local/texlive/2020/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2020/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/usr/local/texlive/2020/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
@@ -217,13 +217,14 @@
   "chapters/chapter1.tex" 1592662060 14747 1ebf25c42a53feb5beeaf03f299227b5 ""
   "chapters/chapter2.tex" 1592746481 16531 465cb0f8d69f4f346d1d9ff4b37146ac ""
   "chapters/chapter3.tex" 1592746609 19799 6a405506dae384cd915e0c05e7c1ef0e ""
-  "chapters/chapter4.tex" 1592814251 18397 c8b571e458b1dab0adfa9a2f11e50540 ""
-  "chapters/chapter5.tex" 1592814524 10487 3bc87ef33f1d38fb3077b94db582d95f ""
+  "chapters/chapter4.tex" 1592814597 18397 c8b571e458b1dab0adfa9a2f11e50540 ""
+  "chapters/chapter5.tex" 1592882959 11156 cd1a1cb5192b4ab6dd4ec15a6aaa300a ""
   "figures/adds/geofence_overview.jpg" 1592793549 340503 15716237d511203b6c33fc59ff977e10 ""
   "figures/adds/hard_loop_com.png" 1592812513 101069 cf45797a398b2de87e25ecdba7a82267 ""
   "figures/adds/hard_loop_fol.png" 1592812566 101284 fb47471164db09fd0b3ee834c5f96c46 ""
   "figures/adds/hard_loop_leader.png" 1592812540 99695 ba1ab96da8f77f8a21fff29010e6c09d ""
   "figures/adds/protected_arch.png" 1592805176 185175 f16a013dd9e975cf9c6a7f124561091b ""
+  "figures/adds/real_test.png" 1592813204 34959 140404b0c0f329aa1e10aa7e0095874e ""
   "figures/adds/states_mech.png" 1592799679 84627 7f9a83d3cdcedb292f5bc4229adae926 ""
   "figures/c1/autopilot_struct.png" 1592662061 60267 07450f04a204924c7367b1e3cbe5d4c9 ""
   "figures/c1/c01-meaning-1.png" 1592662061 89239 7616667a613581d7ef1d9bac1cc2e881 ""
@@ -259,12 +260,12 @@
   "figures/c5/c5-real-pos_err_z.png" 1592662061 50412 f409fd43f62cbc32726ce81cd73bcfac ""
   "figures/c5/c5-real-vel_err.png" 1592662061 52401 4aa3dfc10002a03c147011b278aa9fed ""
   "images/header.png" 1592662061 40727 10d0f2479debeecab32428bf6424c3f6 ""
-  "main.aux" 1592814526 32873 9b8f0732641da8c1bbc3ad63f6e81ac6 "xelatex"
+  "main.aux" 1592882963 33193 0dc4eaedc694e1decef67aeb260e2f06 "xelatex"
   "main.bbl" 1592747406 46883 75770e59034ef88751a15c9453ff980c "biber main"
-  "main.out" 1592814526 5492 58388bef3e49c46b92368b877bdf661a "xelatex"
-  "main.run.xml" 1592814526 2449 535f8a2ce2e738a065036bb38852ee1f "xelatex"
+  "main.out" 1592882963 5492 414428ef48d8b264ae0aca7298c3755b "xelatex"
+  "main.run.xml" 1592882963 2449 535f8a2ce2e738a065036bb38852ee1f "xelatex"
   "main.tex" 1592754392 6901 836a70253010d6941cf3f03ba94679a5 ""
-  "main.toc" 1592814526 6513 670fcef5234fc563c193cabaad5e2b6f "xelatex"
+  "main.toc" 1592882963 6513 50d85d821fb7f58a47adae0010956dd7 "xelatex"
   "misc/0_cover.tex" 1592662061 2062 b9eff60ecac07a962d4b96a2477ae363 ""
   "misc/1_originality.pdf" 1592662061 71638 cda1d56ad6a8d3e8095dbc33e17efa8d ""
   "misc/2_toc.tex" 1592662061 814 8e5372ad5cf8021b3efa7677656fda84 ""
@@ -273,9 +274,9 @@
   "misc/6_acknowledgements.tex" 1592662061 3299 40d6f4ead13440206867340b6ddc1c54 ""
   (generated)
   "main.run.xml"
-  "main.xdv"
-  "main.bcf"
-  "main.out"
   "main.aux"
   "main.log"
   "main.toc"
+  "main.bcf"
+  "main.out"
+  "main.xdv"
