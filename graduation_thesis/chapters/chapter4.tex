@@ -166,7 +166,7 @@ Gazebo中的相应控制舵面运动的插件接受来自PX4的控制器信息�
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{figures/c5/c5-TECS-control.jpg}
+    \includegraphics[width=0.80\textwidth]{figures/c5/update/control_output}
     \caption{竖直平面控制量关系}\label{fig:c5-TECS-control}
 \end{figure}
 由仿真结果可知，本文所设计的TECS控制器可以完成对于期望速度以及期望高度的跟踪，从而达到消除竖直平面内的误差的作用。
@@ -237,27 +237,27 @@ TECS控制器的参数如下表所示：
 机与领机的速度方向误差随时间变化关系；图\ref{c5-real-vel_err}代表从机与领机的速度大小误差随时间的变化关系。
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{figures/c5/c5-real-pos_err_x}
+    \includegraphics[width=0.85\textwidth]{figures/c5/update/pos_x}
     \caption{X通道位置误差}\label{c5-real-pos_err_x}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{figures/c5/c5-real-pos_err_y}
+    \includegraphics[width=0.85\textwidth]{figures/c5/update/pos_y}
     \caption{Y通道位置误差}\label{c5-real-pos_err_y}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{figures/c5/c5-real-pos_err_z}
+    \includegraphics[width=0.85\textwidth]{figures/c5/update/pos_z}
     \caption{Z通道位置误差}\label{c5-real-pos_err_z}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{figures/c5/c5-real-vel_err}
+    \includegraphics[width=0.85\textwidth]{figures/c5/update/vel}
     \caption{领机从机速度大小误差}\label{c5-real-vel_err}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{figures/c5/c5-real-eta_err}
+    \includegraphics[width=0.85\textwidth]{figures/c5/update/angle}
     \caption{领机从机航迹角误差}\label{c5-real-eta_err}
 \end{figure}
 需要注意的一点是：此处的位置误差指的是从机的实际位置与编队的期望位置之间的位值误差，而并非与领机的位置误差。
@@ -270,10 +270,39 @@ TECS控制器的参数如下表所示：
 角度误差较长时间收敛到0，是因为无人机的协调转弯的过渡时间较长所导致的：两种转弯模式，侧滑转弯（STT）基于侧滑角产生侧向力，本方式的侧向过载较小；
 协调（倾斜）转弯：滚转后使升力对准所需机动方向，获得的侧向过载大，但是过渡时间长。\cite{YuJianQiao2010}上述原因，导致无人机内环在
 控制航向时过渡时间较大。
+
+\section{双机编队数学仿真和动力学仿真的关系对比}
+本章中所用到的两种仿真方法的侧重点有所不同，所使用的方法也有所不同，
+因而导致所出现的仿真结果也不尽相同。
+
+对于数学仿真而言，该仿真方法专注于编队控制器控制逻辑以及控制规律的
+可行性验证：其根本目的是检验控制器设计时，选取的混合误差以及所选择
+的解耦控制的方法是否可行。
+
+对于动力学仿真而言，该仿真是建立在数学仿真验证通过的基础之上的，其目的：
+是检验前文逻辑可行的编队控制器在考虑无人机自驾仪的姿态控制以及无人机
+动力学的环节之后的控制稳定性。
+
+在实现仿真的方法上，两种仿真仿真方法的主要区别在于编队控制器的控制
+对象的动态特性的不一致：数学仿真的控制对象实际上是一个时间常数为
+$\tau$的一阶惯性环节和第\ref{chap:formation_dynamic_equ}中介绍的
+无人机质点运动学的结合；而动力学仿真的控制对象是完整的自动驾驶仪内环
+以及无人机动力学所组成的更加复杂、控制难度更高的动力学环节，能够比较
+真实地反映出编队的状态。下图展示了两种仿真方法的实现方法：
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/adds/contrust_sim}
+    \caption{数学与动力学仿真实现方法}\label{fig:contrust_sim}
+\end{figure}
+
+在仿真结果上，动力学仿真相较于数学仿真，控制收敛时间明显加长，超调
+量增大，稳态误差也有一定程度的增加，控制效果整体恶化。除去控制对象
+本身的复杂性，动力学仿真环境产生的传感器噪声以及环境不确定性也使得控制
+对象的复杂难度增加。
 \section{本章小结}
 本章主要分为三部分：第一部分着重介绍了本次设计所需要用到的仿真软件环境，详细介绍了Gazebo的软件架构，仿真机理以及仿真的相关特性。并通过ROS操作系统以及
 MAVROS功能包搭建了与PX4内环进行数据交互的软件接口；之后结合Gazebo建立起了完整的编队控制器的无人机动力学仿真实验环境，
 为后文的动力学仿真提供了相应的平台。
 之后的主要工作是对于前文所设计的编队控制器进行响应的仿真：在第二部分，考虑无人机的质点运动模型，利用MATALB/Simulink等工具进行了
 编队控制器的算法层面的数学仿真。在第三部分，利用前文中所介绍的Gazebo仿真环境进行编队控制器的动力学仿真，并整定了相关控制器的
-参数，检验了控制器的稳定性。
+参数，检验了控制器的稳定性，最后对两种仿真方式的关系做出了对比。
